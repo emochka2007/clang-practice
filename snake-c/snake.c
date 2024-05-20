@@ -1,16 +1,16 @@
 #include <ncurses.h>
 #include <time.h>
 #include <stdlib.h>
-int *gen_rand_yx(int max_x, int max_y)
+
+int snake_len = 0;
+int random_x = 0;
+int random_y = 0;
+void gen_rand_yx()
 {
-	int random_x = rand() % 25;
-	int random_y = rand() % 25;
-	int *rand_arr = (int *)malloc(2 * sizeof(int));
-	rand_arr[0] = random_x;
-	rand_arr[1] = random_y;
-	return rand_arr;
+	random_x = rand() % 5;
+	random_y = rand() % 25;
 }
-void spawn_apple(int y, int x)
+void spawn_apple(int x, int y)
 {
 	char *apple = "+";
 	mvaddstr(y, x, apple);
@@ -26,14 +26,36 @@ void print_array(int *arr, int len, char *comment)
 	printw("\n");
 }
 
-int *move_to_left(int *arr, int len)
+void move_to_left(int *x_arr, int *y_arr)
 {
-	for (int i = 1; i < len; i++)
+	for (int i = 1; i < snake_len; i++)
 	{
-		arr[i - 1] = arr[i];
+		x_arr[i - 1] = x_arr[i];
+		y_arr[i - 1] = y_arr[i];
 	}
-	return 0;
+
+	snake_len--;
 }
+
+void grow(int *x_arr, int *y_arr, int x, int y)
+{
+	y_arr[snake_len] = y;
+	x_arr[snake_len] = x;
+	snake_len++;
+}
+
+int is_intersected(int *x_arr, int *y_arr, int arr_len, int head_x, int head_y)
+{
+	for (int i = arr_len - 2; i >= 0; i--)
+	{
+		if (x_arr[i] == head_x && y_arr[i] == head_y)
+		{
+			return 0;
+		}
+	}
+	return -1;
+}
+
 int main()
 {
 
@@ -50,50 +72,89 @@ int main()
 	getmaxyx(stdscr, max_y, max_x);
 	int cell_y_coord[max_y * max_x];
 	int cell_x_coord[max_y * max_x];
-	int snake_len = 1;
-	int *apple_coords = gen_rand_yx(max_y, max_x);
+	grow(cell_x_coord, cell_y_coord, 10, 10);
+	// halfdelay(3);
+	int direction = 'L';
+	gen_rand_yx();
 	while (1)
 	{
 		int code = getch();
 		switch (code)
 		{
 		case 97:
-			x--;
+			if (direction != 'R')
+			{
+				direction = 'L';
+			}
 			break;
 		case 115:
-			y++;
+			if (direction != 'D')
+			{
+				direction = 'U';
+			}
 			break;
 		case 100:
-			x++;
+			if (direction != 'L')
+			{
+				direction = 'R';
+			}
 			break;
 		case 119:
+			if (direction != 'U')
+			{
+				direction = 'D';
+			}
+			break;
+		}
+		halfdelay(2);
+
+		switch (direction)
+		{
+		case 'L':
+			x--;
+			break;
+		case 'U':
+			y++;
+			break;
+		case 'R':
+			x++;
+			break;
+		case 'D':
 			y--;
 			break;
 		}
-		cell_y_coord[snake_len - 1] = y;
-
-		cell_x_coord[snake_len - 1] = x;
-
+		grow(cell_x_coord, cell_y_coord, x, y);
 		erase();
 		print_array(cell_y_coord, snake_len, " Y ");
 		print_array(cell_x_coord, snake_len, " X ");
-		printw("%d snake_len\n", snake_len);
-		if (y == apple_coords[0] && x == apple_coords[1])
+
+		// printw("%d snake_len\n", snake_len);
+		if (y == random_y && x == random_x)
 		{
-			snake_len++;
-			apple_coords = gen_rand_yx(max_y, max_x);
+
+			gen_rand_yx();
 		}
 		else
 		{
-			move_to_left(cell_x_coord, snake_len);
-			move_to_left(cell_y_coord, snake_len);
+			move_to_left(cell_x_coord, cell_y_coord);
 		}
+		int head_x = cell_x_coord[snake_len - 1];
+		int head_y = cell_y_coord[snake_len - 1];
+
+		if (is_intersected(cell_x_coord, cell_y_coord, snake_len, head_x, head_y) == 0)
+		{
+
+			endwin();
+			return 0;
+		}
+
 		for (int i = 0; i < snake_len; i++)
 		{
-			printw("%d scell_y_coord[i]\n", cell_y_coord[i]);
+
 			mvaddstr(cell_y_coord[i], cell_x_coord[i], snake_cell);
 		}
-		spawn_apple(apple_coords[0], apple_coords[1]);
+
+		spawn_apple(random_x, random_y);
 	}
 	endwin();
 	return 0;
